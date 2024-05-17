@@ -1,0 +1,13 @@
+für jahr 2013 von intel : https://www.stealth.com/intels-new-4th-generation-processors-coming-soon-to-stealth/
+machinebalance usw formeln : 
+@book{hager-2010,
+	author = {Hager, Georg and Wellein, Gerhard},
+	month = {7},
+	title = {{Introduction to High Performance Computing for Scientists and Engineers}},
+	year = {2010},
+	doi = {10.1201/ebk1439811924},
+	url = {https://doi.org/10.1201/ebk1439811924},
+    page = 66,63
+}
+
+intel i79700k = https://www.intel.de/content/www/de/de/products/sku/186604/intel-core-i79700k-processor-12m-cache-up-to-4-90-ghz/specifications.html

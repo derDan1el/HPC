@@ -32,8 +32,22 @@ for generation, cores in data:
     x.append(generation_names.get(generation, generation))
     y.append(cores)
 
+# Höchste Punkte pro Generation finden
+max_points = {}
+for generation, cores in data:
+    if generation not in max_points or cores > max_points[generation]:
+        max_points[generation] = cores
+
+# Daten für die Kurve vorbereiten
+curve_x = []
+curve_y = []
+for generation, cores in max_points.items():
+    curve_x.append(generation_names.get(generation, generation))
+    curve_y.append(cores)
+
 # Plot erstellen
 plt.plot(x, y, marker='o', linestyle='None')  # Keine Verbindungen zwischen den Punkten
+plt.plot(curve_x, curve_y, marker='o')  # Kurve durch die höchsten Punkte
 plt.xlabel('Generation')
 plt.ylabel('Anzahl der Kerne')
 plt.title('Prozessor-Kerne pro Generation')

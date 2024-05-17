@@ -1,0 +1,16 @@
+Year |   Name     | Bandwidth  | Cores  -| Frequency |    Instruction Set       | Peak performance
+-----|------------|------------|---------|-----------|--------------------------|-----------------
+2011 | i7-3960X   | 51.2 GB/s  |   6     |    3.9    | AVX (8 FLOPs/cycle)      | 187.2
+2012 | i7-3970X   | 51.2 GB/s  |   6     |    4.0    | AVX (8 FLOPs/cycle)      | 192.0
+2013 | i7-4960X   | 59.7 GB/s  |   6     |    4.0    | AVX (8 FLOPs/cycle)      | 192.0
+2014 | i7-5960X   | 68.3 GB/s  |   8     |    3.5    | AVX2 (16 FLOPs/cycle)    | 448.0
+2015 | i7-6950X   | 76.8 GB/s  |  10     |    3.5    | AVX2 (16 FLOPs/cycle)    | 560.0
+2016 | i7-6950X   | 76.8 GB/s  |  10     |    3.5    | AVX2 (16 FLOPs/cycle)    | 560.0
+2017 | i9-7980XE  | 85.3 GB/s  |  18     |    4.2    | AVX-512 (32 FLOPs/cycle) | 2419.2
+2018 | i9-9980XE  | 85.3 GB/s  |  18     |    4.4    | AVX-512 (32 FLOPs/cycle) | 2534.4
+2019 | i9-10980XE | 85.3 GB/s  |  18     |    4.6    | AVX-512 (32 FLOPs/cycle) | 2649.6
+2020 | i9-10980XE | 85.3 GB/s  |  18     |    4.6    | AVX-512 (32 FLOPs/cycle) | 2649.6
+2021 | i9-11900K  |  50 GB/s   |   8     |    5.3    | AVX-512 (32 FLOPs/cycle) | 1356,8
+2022 | i9-13900K  | 89.6 GB/s  | 24(8,16)| (5.8, 4.3)| AVX2 (16 FLOPs/cycle)    | 1843,2
+2023 | i9-14900K  | 89.6 GB/s  | 24(8,16)| (6, 4.4)  | AVX2 (16 FLOPs/cycle)    | 1894,4
+2024 | i9-14900KS | 89.6 GB/s  | 24(8,16)| (6.2, 4.5)| AVX2 (16 FLOPs/cycle)    | 1945,6
