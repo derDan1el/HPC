@@ -17,8 +17,8 @@
 \begin{abstract}
     Die Art und Weise, wie auf Daten zugegriffen wird,
     kann einen erheblichen Einfluss auf die Performance eines Algorithmus haben.
-    Insbesondere wenn große Datenmengen häufig zwischen langsamen Speichermedien und dem Cache ausgetauscht werden,
-    spricht man von einem Engpass des Speicherinterfaces.
+    Insbesondere wenn große Datenmengen häufig zwischen langsamen Speichermedien und dem Prozessor ausgetauscht werden,
+    spricht man häufig von einem Engpass des Speicherinterfaces.
     Durch effiziente Datenzugriffe und optimale Nutzung des Caches 
     kann nicht nur die Performance signifikant gesteigert werden, 
     sondern es wird auch sichergestellt, 
@@ -35,11 +35,11 @@
     diese jedoch in der Regel nicht für den Standard-Endverbraucher bestimmt sind. 
     Ebenso zeigt sich in den Abbildungen 2 und 2.1 ein Anstieg der maximalen Taktfrequenz über die Jahre. 
     Wenn man nun die theoretische maximale Rechenleistung, 
-    definiert als:\\ $\textnormal{P}_{\textnormal{max}} = \text{Anzahl der Kerne} * \text{Turbo Taktfrequenz} * \text{Flops pro Taktzyklus}$,\\und
+    definiert als:\\ $\textnormal{P}_{\textnormal{max}} = \text{Anzahl der Kerne} \times \text{Turbo Taktfrequenz} \times \text{Flops pro Taktzyklus}$,\\und
     der Entwicklung der Speicherbandbreite gegenüberstellt, wird in Abbildung 3 deutlich, 
     dass die Zunahme der Speicherbandbreite nicht im gleichen Maße wie die Rechenleistung ansteigt. 
-    Im Detail hat sich die Bandbreite von 51.2 GB/s im Jahr 2013 auf 89.6 GB/s im Jahr 2024 erhöht. 
-    Parallel dazu ist die Performance im gleichen Zeitraum von 187.2 FLOPS/s auf 1945.6 FLOPS/s gestiegen. 
+    Im Detail hat sich die Bandbreite von 51.2 $\frac{\text{GByte}}{\text{s}}$ im Jahr 2013 auf 89.6 $\frac{\text{GByte}}{\text{s}}$ im Jahr 2024 erhöht. 
+    Parallel dazu ist die Performance im gleichen Zeitraum von 187.2 $\frac{\text{Flops}}{\text{s}}$ auf 1945.6 $\frac{\text{Flops}}{\text{s}}$ gestiegen. 
     Diese Diskrepanz zwischen der gesteigerten Rechenleistung und der vergleichsweise langsamer wachsenden Speicherbandbreite 
     verdeutlicht die Notwendigkeit einer Optimierung von Datenzugriffen. 
     Ein effizienter Einsatz des Caches ist dabei unerlässlich, um die Leistung zu maximieren.
@@ -49,36 +49,72 @@
     die zur Bewertung von loop-basiertem Code und zur Berechnung der Performancegrenzen herangezogen werden. 
     Es ist jedoch wichtig zu berücksichtigen, dass diese Formeln lediglich eine Annäherung darstellen 
     und nur unter bestimmten Bedingungen gültig sind. Beispielsweise wird vorausgesetzt, 
-    dass alle Ressourcen vollständig ausgeschöpft werden. 
+    dass alle Ressourcen vollständig ausgeschöpft werden die die CPU zu bieten hat. 
     Zudem basieren die Formeln auf Aspekten des idealen Cache-Modells, 
     wie einem unendlich schnellen Cache und der Nichtexistenz von Latenzzeiten.
 
 
     \subsection{Maschinenbalance}
-    Die Maschinenbalance $\textnormal{B}_{\textnormal{m}}$ ist das Verhältnis 
-    aus der maximalen Bandbreite und der maximalen theoretischen Rechenleistung
-    $\textnormal{B}_{\textnormal{m}} = \frac{\textnormal{B}_{\textnormal{max}}}{\textnormal{P}_{\textnormal{max}}}$ \\
-    Es beschreibt also wie viele Daten pro Flop übertragen werden könnnen. Um dies zu verdeutlichen, 
-    betrachten wir die $\textnormal{B}_{\textnormal{m}}$ für den i7-9700k Prozessor,     % Hier muss ein Quellenverweis hin
-    der eine maximale Bandbreite von 41.6 GB/s und eine maximale Rechenleistung von 8 Kerne * 4.9 GHz * 16 FLOPS/Taktzyklus = 627,2 FLOPS/s hat.
-    41.6 GB/s  / 8 Byte = 5.2 GWords/s
-    Somit ergibt sich $\textnormal{B}_{\textnormal{m}} = \frac{41.6 \textnormal{GB/s}}{627.2 \textnormal{FLOPS/s}} = 0.066 \textnormal{GB/FLOP}$.
-    
-    
-    \subsection{Codebalance}
-    In diesem Unterabschnitt erklären wir das Konzept der Codebalance und führen die entsprechenden Berechnungen durch.
-    
-    \subsection{Lichtgeschwindigkeit}
-    Hier erläutern wir das Konzept der Lichtgeschwindigkeit in Bezug auf die Performance und führen die entsprechenden Berechnungen durch.
-    
-    \subsection{Maximale Performance}
-    In diesem Unterabschnitt berechnen wir die maximale erreichbare Performance für loop-basierten Code.
-    
-    \subsection{Zusammenfassung}
-    Hier fassen wir die Ergebnisse der Berechnungen zusammen und diskutieren ihre Bedeutung für die Optimierung von Datenzugriffen und die effiziente Nutzung des Caches.
 
-\section{Ergebnisse}
-Hier werden die Ergebnisse und deren Interpretation präsentiert.
+    Die Maschinenbalance $\textnormal{B}_{\textnormal{m}}$ ist das Verhältnis 
+    aus der maximalen Bandbreite und der theoretischen Rechenleistung
+    $\textnormal{B}_{\textnormal{m}} = \frac{\textnormal{B}_{\textnormal{max}}}{\textnormal{P}_{\textnormal{max}}}$.
+    Sie beschreibt, wie viele Daten pro Flop übertragen werden können. Zur Veranschaulichung 
+    betrachten wir die $\textnormal{B}_{\textnormal{m}}$ für den i7-9700K Prozessor,     % Hier muss ein Quellenverweis hin
+    der 2018 erschienen ist und eine maximale Bandbreite von 41.6\,$\frac{\text{GByte}}{\text{s}}$ sowie
+    eine theoretische Rechenleistung von 8\,Kerne $\times$ 4.9\,GHz $\times$ 16\,$\frac{\text{Flops}}{\text{Taktzyklus}}$ = 627,2\,$\frac{\text{Flops}}{\text{s}}$ besitzt.
+    Die Bandbreite muss noch in Fließkommazahlen umgerechnet werden, die pro Sekunde geladen werden können. Also
+    $\frac{41.6 \, \text{GB/s}}{8 \, \text{Byte}} = 5.2 \, \frac{\text{Fließkommazahlen}}{\text{s}}$.
+    Daraus ergibt sich, dass $\textnormal{B}_{\textnormal{m}} = \frac{5.2 \, \textnormal{Fließkommazahlen/s}}{627.2 \, \textnormal{Flops/s}} \approx 0.008\,\frac{\textnormal{Fließkommazahlen}}{\textnormal{Flop}}$
+    geladen werden können. Mit anderen Worten, bis eine Fließkommazahl geladen ist, müssen
+    125 Flops auf einem Wert durchgeführt werden, bis der nächste Wert geladen ist. 
+    Die Maschinenbalance bei den neuesten Prozessoren wie dem i9-14900KS liegt bei $\approx 0.0058$, und somit wären 
+    172 Flops pro geladene Fließkommazahl erforderlich. Man könnte daher schlussfolgern, 
+    dass das Rechnen quasi kostenlos ist und das Laden der Werte den limitierende Faktor darstellt.
+
+    \subsection{Codebalance}
+    Die Codebalance $\textnormal{B}_{\textnormal{c}} = \frac{\textnormal{Datenverkehr}}{\textnormal{Flops}}$ ist das Verhältnis
+    der zu ladenden und speichernden Fließkommazahlen und der Anzahl der Flops in einer loop Iteration. 
+    Hierbei zählt man aber nur die load und store Operationen, welche wirklich über den langsamen Datenpfad verläuft, daher wird $\text{l\_i}$ nicht mitgezählt,
+    weil es sich im Register befindet.
+    In Abbildung 4 ist ein solcher loop dargestellt, % Hier muss ein Quellenverweis hin
+    welcher 4 Flops ausführt und 3 Elemente aus den drei Arrays $\textnormal{X}$, $\textnormal{Y}$ und $\textnormal{Z}$ lädt 
+    und eine speicher Operation in $\textnormal{Z}$ durchführt. Die Codebalance ist also $\textnormal{B}_{\textnormal{c}} = \frac{3+1}{4} = 1$. 
+
+
+    \subsection{Berechnung der zu erwartenden Performance}
+    Um die maximal erreichbare Performance eines loop-basierten Codes zu berechnen, 
+    bestimmt man den Anteil der maximalen CPU-Performance, die tatsächlich erreicht werden kann. 
+    Dieser Anteil wird als ,,lightspeed" $\text{l}$ bezeichnet und ist definiert als 
+    $\text{l} = \min(1, \frac{\text{B}_{m}}{\text{B}_{c}})$. 
+    Da diese Formel auf den ersten Blick nicht intuitiv ist, 
+    kann ein Beispiel zur Veranschaulichung dienen. 
+    Betrachten wir erneut den Code aus Abbildung 4. 
+    Die Maschinenbalance $\textnormal{B}_{\textnormal{m}}$ 
+    beträgt 0.5 $\frac{\textnormal{Fließkommazahlen}}{\textnormal{Flop}}$, 
+    während die Codebalance $\textnormal{B}_{\textnormal{c}}$ 1 beträgt, 
+    da vier Fließkommazahlen geladen und gespeichert werden müssen und vier Flops ausgeführt werden. 
+    Da das Bereitstellen und Abspeichern von Fließkommazahlen nicht so schnell ist wie das Rechnen 
+    (was durch $\textnormal{B}_{\textnormal{m}}$  = 0.5 ausgedrückt wird), kann man in der Zeit, 
+    in der man vier Flops ausführen würde, 
+    nur halb so viele, also 4 $\times$ 0.5 = 2 Fließkommazahlen laden und/oder abspeichern.
+    Daher ist die maximale Performance, die erreicht werden kann, 
+    $\text{l} = \min(1, \frac{0.5}{1}) = 0.5$. 
+    
+    Oder anders betrachtet, es könnte einen Code geben,
+    der doppelt so viele Flops ausführt wie er Fließkommazahlen lädt und speichert. 
+    Dies würde zu einer Codebalance von 0.5 führen. 
+    In einem solchen Szenario wäre die Anzahl 
+    der zu ladenden und speichernden Fließkommazahlen genau gleich der theoretisch möglichen Anzahl
+    an Fließkommazahlen, die geladen und gespeichert werden könnten. 
+    Somit würde der maximal zu erreichende Anteil an 
+    $\textnormal{P}_{\textnormal{max}}$ bei $\text{l} = \min(1, \frac{0.5}{0.5}) = 1$ liegen.  % Hier muss ein Quellenverweis hin
+    Wenn dieser Wert nah an 1 liegt ist man nicht Speichergebunden.
+    Die maximal erreichbare Performance ist somit $\textnormal{P} =  \textnormal{l} \times \textnormal{P}_{\textnormal{max}}$ oder 
+    $\textnormal{P} =  \min(\textnormal{P}_{\textnormal{max}}, \frac{\textnormal{b}_{\textnormal{max}}}{\textnormal{B}_{\textnormal{c}}})$.
+
+\section{Loop Unrolling}
+
 
 \section{Diskussion}
 Hier wird über die Bedeutung und Implikationen der Ergebnisse diskutiert.
