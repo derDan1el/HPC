@@ -4,6 +4,7 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{graphicx}
+\usepackage{minted}
 
 % Titel, Autor und Datum festlegen
 \title{Titel des Papers}
@@ -113,14 +114,147 @@
     Die maximal erreichbare Performance ist somit $\textnormal{P} =  \textnormal{l} \times \textnormal{P}_{\textnormal{max}}$ oder 
     $\textnormal{P} =  \min(\textnormal{P}_{\textnormal{max}}, \frac{\textnormal{b}_{\textnormal{max}}}{\textnormal{B}_{\textnormal{c}}})$.
 
-\section{Loop Unrolling}
+\section{Loop Fusion} 
+    Die erste Methode, die zur Optimierung des Zugriffsverhaltens vorgestellt 
+    wird und bei der anhand des präsentierten Modells eine Verbesserung erkennbar ist, 
+    ist Loop Fusion. Es ist wichtig zu verstehen, dass der Cache ein kleiner, 
+    schneller Speicher ist, der die Least Recent Used (LRU) Policy verwendet, um zu entscheiden, 
+    welche Daten im Cache verbleiben. Dies bedeutet, 
+    dass die am längsten nicht genutzten Daten aus dem Cache entfernt werden, 
+    wenn eine neue Cache Line geladen werden muss und kein Platz mehr im Cache vorhanden ist. 
+    Dies beschreibt die zeitliche Lokalität. 
+    Wenn eine Cache Line geladen wird und die umliegenden Daten ebenfalls in den Cache geladen werden, 
+    spricht man von räumlicher Lokalität, da man davon ausgeht, 
+    dass diese Daten in naher Zukunft ebenfalls genutzt werden. 
+    Typischerweise beträgt die Größe einer Cache-Zeile 64 Bytes, 
+    kann aber durch die Befehle \texttt{getconf LEVEL1\_DCACHE\_LINESIZE}, 
+    \texttt{getconf LEVEL2\_CACHE\_LINESIZE}, \texttt{getconf LEVEL3\_CACHE\_LINESIZE} 
+    leicht bestimmt werden. Um die Größe des Caches zu ermitteln, 
+    kann man den Befehl \texttt{lstopo} verwenden, sofern installiert. 
+    Betrachtet man Abbildung 5, ist % hier muss ein Quellenverweis hin
+    leicht zu erkennen, dass zunächst in einer for-Schleife die Elemente aus dem Array 
+    $\textnormal{A}$ mit dem Skalar $\textnormal{2.0}$ 
+    multipliziert und in das Array $\textnormal{Z}$ gespeichert werden. 
+    Anschließend wird eine weitere for-Schleife ausgeführt, die das Gleiche tut, 
+    nur dass hier das Ergebnis in $\textnormal{Y}$ gespeichert wird. 
+    Wenn die Arrays zu groß sind und am Ende der ersten for-Schleife die Cache Line, 
+    die die ersten Elemente aus A enthält verdrängt wurde, 
+    müssen diese für die zweite for-Schleife erneut in den Cache geladen werden. 
+    Daten, die in den Cache geladen und aus Platzgründen wieder verdrängt wurden, 
+    aber später wieder benötigt und erneut in den Cache geladen werden, nennt man 
+    \texttt{Capacity Miss}. Das erstmalige Laden von Daten über langsame Datenpfade wird als 
+    \texttt{Cold Miss} bezeichnet. Die Code-Balance $\textnormal{B}_{\textnormal{c}}$ 
+    der beiden for-Schleifen beträgt $\frac{2}{1} = 2$. Wenn man jedoch die beiden 
+    for-Schleifen zusammenführt (siehe Abbildung 6), spart man sich einen langsamen Load, % hier muss ein Quellenverweis hin
+    da der Wert von A[i] in der Zeile zuvor in den Cache geladen wurde, 
+    wodurch sich die Code-Balance auf $\frac{3}{2} = 1.5$ reduziert. 
+    Um das Modell zu überprüfen, wurden beide Varianten gebenchmarkt. 
+    Die Ergebnisse sind in Abbildung 7 dargestellt. Man erkennt, % hier muss ein Quellenverweis hin
+    dass die Loop-Fusion-Variante schneller ist als die nicht fusionierte Variante.
+
+\section{Der STREAM Benchmark}
+    Der STREAM Benchmark besteht aus vier Kernels, die die Bandbreite des Speicherinterfaces meist in GB/s messen sollen.
+    Die vier Kernels sind Copy, Scale, Add und Triad wobei in der Tabelle auch die Codebalance nochmal aufgeführt ist.
+    
+
+    \begin{table}[h]
+        \centering
+        \begin{tabular}{|c|c|c|c|}
+        \hline
+        \textbf{Kernelname} & \textbf{Operation} & \textbf{Code-Balance} \\
+        \hline
+        Copy & A[i] = B[i] & - \\
+        \hline
+        Scale & A[i] = q*B[i] & 2/1 \\
+        \hline
+        Add & A[i] = B[i] + C[i] & 2/1 \\
+        \hline
+        Triad & A[i] = B[i] + q*C[i] & 3/2 \\
+        \hline
+        \end{tabular}
+        \caption{STREAM Benchmark Kernels und ihre Code-Balance}
+        \label{tab:stream_benchmark}
+        \end{table}
 
 
-\section{Diskussion}
-Hier wird über die Bedeutung und Implikationen der Ergebnisse diskutiert.
+    Für die Ausführung des STREAM-Benchmarks ist es wichtig, 
+    dass die Datenmengen ausreichend groß sind. AMD empfiehlt, 
+    dass die Arrays mindestens viermal so groß sein sollten wie die Summe aller Last-Level-Caches. % Hier muss ein Quellenverweis hin. 
+    Im vorherigen Abschnitt wurde der Scale-Kernel genutzt, 
+    um die Effektivität der Loop-Fusion zu demonstrieren. 
+    Dabei wurde die Zeit jedoch in Nanosekunden anstelle von GB/s gemessen. 
+    Da diese synthetischen Kernels die Hardware direkt testen, 
+    sind die erreichten Bandbreitenwerte aussagekräftigere Vergleichswerte als die, 
+    die man beispielsweise auf den Webseiten von AMD oder Intel findet, 
+    um die Leistung von Code und Hardware einzuschätzen. % Hier muss ein Quellenverweis hin.
+    Abbildung 8 stellt die Ergebnisse des Triad-Kernels auf einem i7-9700K dar. % Hier muss ein Quellenverweis hin. 
+    Es ist erkennbar, dass die Bandbreite mit jedem Cache-Level abnimmt, 
+    wobei der Rückgang bei dem L3-Cache besonders stark ist. 
+    Derselbe Benchmark wurde auch auf dem ARA-Cluster auf einem der FSU Jena durchgeführt. 
+    Die Ergebnisse, die in Abbildung 9 dargestellt sind, verdeutlichen nochmals, 
+    wie die Bandbreite von Cache-Level zu Cache-Level abnimmt. % Hier muss ein Quellenverweis hin.
+    Sind Ergebnisse eines passenden Tests vorhanden sollte man also die vorhin vorgestellte Formel zur Berechnung der maximalen erreichbaren
+    Performance zu $\textnormal{P} =  \min(\textnormal{P}_{\textnormal{max}}, 
+    \frac{\textnormal{b}_{\textnormal{Stream}}}{\textnormal{B}_{\textnormal{c}}})$ abändern.
 
-\section{Fazit}
-Hier wird das Fazit des Papers gezogen und ein Ausblick gegeben.
+\section{Das Beachten des Speicherzugriffsmusters}
+    Bei zwei Dimensionalen Arrays bestimmt die Programmiersprache die Reihenfolge 
+    in der die Elemente im Speicher abgelegt werden. Fortran, Julia und R werden beispielsweise
+    in Column-Major-Order abgelegt, während C++ in Row-Major-Order abgelegt wird.
+    Greift man auf ein Element zu, dann wird die zugehörige Cache Line geladen.
+    Im besten Fall werden anschließend alle Elemente der Cache Line abgerufen dann die Cache Line verdrängt 
+    und nie wieder benötigt. Im schlechtesten Fall wird die Cache Line verdrängt bevor alle Elemente abgerufen wurden 
+    oder sogar nur ein Element genutzt, wodurch der Zweck des Caches verfehlt wird.
+    In Abbildung 10 ist ein Beispiel für ein 2D Array in Row-Major-Order dargestellt. % Hier muss ein Quellenverweis!!!!! hin.
+    Würde man in dieser Matrix Spaltenweise auf die Elemente zugreifen,
+    dann würde jeder Zugriff das Laden einer neuen Cache Line erfordern, was man Strided Zugriff nennt, 
+    weil man restlichen Elemente der Zeile überspringt.
+    Um die Auswirkungen des Speicherzugriffsmusters zu demonstrieren, sind hier zwei 
+    Varianten einer Matrix Vektor Multiplikation dargestellt.
+
+    \begin{minted}{cpp}
+    void gemm_row(double *X, double *Y, double *Z, int n)
+    {
+        for (std::size_t l_m = 0; l_m < n; l_m++)
+        {
+            for (std::size_t l_k = 0; l_k < n; l_k++)
+            {
+                for (std::size_t l_n = 0; l_n < n; l_n++)
+                {
+                    Z[l_m * n + l_n] += X[l_m * n + l_k] * Y[l_k * n + l_n];
+                }
+            }
+        }
+    }
+    
+    void gemm_column(double *X,
+                     double *Y,
+                     double *Z,
+                     int n)
+    {
+    
+        for (std::size_t l_n = 0; l_n < n; l_n++)
+        {
+            for (std::size_t l_k = 0; l_k < n; l_k++)
+            {
+                for (std::size_t l_m = 0; l_m < n; l_m++)
+                {
+                    Z[l_m * n + l_n] += X[l_m * n + l_k] * Y[l_k * n + l_n];
+                }
+            }
+        }
+    }
+    \end{minted}
+
+
+
+
+
+
+
+
+
+
 
 % Literaturverzeichnis
 \begin{thebibliography}{9}

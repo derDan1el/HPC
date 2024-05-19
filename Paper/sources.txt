@@ -11,3 +11,7 @@ machinebalance usw formeln :
 }
 
 intel i79700k = https://www.intel.de/content/www/de/de/products/sku/186604/intel-core-i79700k-processor-12m-cache-up-to-4-90-ghz/specifications.html
+
+
+
+Capacity miss cold miss  : 05_data_locality_dense_linear_algebra_23_12_21.pdf Alex Breuer Parallel Computing 1
