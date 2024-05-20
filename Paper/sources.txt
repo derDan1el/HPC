@@ -15,3 +15,5 @@ intel i79700k = https://www.intel.de/content/www/de/de/products/sku/186604/intel
 
 
 Capacity miss cold miss  : 05_data_locality_dense_linear_algebra_23_12_21.pdf Alex Breuer Parallel Computing 1
+
+MMM png Abbildung 13 : 05_data_locality_dense_linear_algebra_23_12_21.pdf PC1 Alex Breuer Seite 85

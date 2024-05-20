@@ -59,7 +59,9 @@
 \usepackage{hyperref}
 \usepackage[export]{adjustbox}
 \usepackage{minted}
-
+\usepackage{changepage}
+\usepackage{tikz}
+\usetikzlibrary{decorations.pathmorphing}
 
 %% Rights management information.  This information is sent to you
 %% when you complete the rights form.  These commands have SAMPLE
@@ -167,7 +169,7 @@
     verdeutlicht die Notwendigkeit einer Optimierung von Datenzugriffen. 
     Ein effizienter Einsatz des Caches ist dabei unerlässlich, um die Leistung zu maximieren.
 
-    \section{Berechnung der Performancegrenzen}
+    \section{Die Berechnung der Performancegrenzen}
     In den nachfolgenden Unterabschnitten werden die Formeln vorgestellt, 
     die zur Bewertung von loop-basiertem Code und zur Berechnung der Performancegrenzen herangezogen werden. 
     Es ist jedoch wichtig zu berücksichtigen, dass diese Formeln lediglich eine Annäherung darstellen 
@@ -331,11 +333,15 @@
     Würde man in dieser Matrix Spaltenweise auf die Elemente zugreifen,
     dann würde jeder Zugriff das Laden einer neuen Cache Line erfordern, was man Strided Zugriff nennt, 
     weil man restlichen Elemente der Zeile überspringt.
-    Um die Auswirkungen des Speicherzugriffsmusters zu demonstrieren, sind hier zwei 
-    Varianten einer Matrix Vektor Multiplikation dargestellt.
-
+    Um die Auswirkungen des Speicherzugriffsmusters zu demonstrieren, sind hier zwei C++ 
+    Varianten einer Matrix Vektor Multiplikation dargestellt. Die Elemente der Matrizen sind 
+    in Row Major abgespeichert und die Matrizen sind quadratisch und gleich groß.
+    
+    \begin{adjustwidth}{-0,5cm}{}
+    \begin{footnotesize}
     \begin{minted}{cpp}
-    void gemm_row(double *X, double *Y, double *Z, int n)
+
+    void gemm_mkn(double* X, double* Y, double* Z, std::size_t n)
     {
         for (std::size_t l_m = 0; l_m < n; l_m++)
         {
@@ -349,10 +355,7 @@
         }
     }
     
-    void gemm_column(double *X,
-                     double *Y,
-                     double *Z,
-                     int n)
+    void gemm_nkm(double* X, double* Y, double* Z, std::size_t n)
     {
     
         for (std::size_t l_n = 0; l_n < n; l_n++)
@@ -367,14 +370,210 @@
         }
     }
     \end{minted}
+    \end{footnotesize}
+    \end{adjustwidth}
+
+
+
+\,\\Um zu entscheiden welcher der beiden Implementierungen effizienter ist,
+ohne sie zu benchmarken kann man sich jeweils die Zugriffsmuster ansehen.
+In der ersten Implementierung greift Z mit einem $\textnormal{Stride-1}$  auf die Elemente zu,
+dabei wird die selbe Zeile n-Mal durchgelaufen bis die nächste Zeile bei Z bearbeitet wird.
+X greift n-Mal auf das selbe Element zu bevor es mit einem Stride-1 auf das nächste Element zugreift.
+Man bleibt somit bei X auch in der selben Zeile also in der selben Cache Line.
+Y arbeitet sich Zeilenweise durch die Matrix und wiederholt jenes n-Mal. Die folgende Abbildung
+zeigt nochmal das Verhalten des Algorithmus.\\\textbf{Abbildung 11: Visualisierung der ersten Implementierung}
+
+
+\begin{tikzpicture}[scale=0.28]
+    % Matrix C
+    \draw (0,0) rectangle (7,7);
+    \foreach \i in {1,...,6} {
+        \draw (\i,0) -- (\i,7);
+        \draw (0,\i) -- (7,\i);
+    }
+    \foreach \i in {0,...,6} {
+        \fill[red, opacity=0.3] (\i,6) rectangle (\i+1,7);
+    }
+    \node at (3.5,-0.5) {Z};
+
+    % Loop symbol for Matrix C
+    \draw[->] (0.5,6.5) to[bend left=30] (6.5,6.5) to[bend left=10] (0.3,6.5);
+    \node at (3.5,8) {n-Mal};
+
+    % += symbol
+    \node at (8.5,3.5) {+=};
+
+    % Matrix A
+    \draw (10,0) rectangle (17,7);
+    \foreach \i in {1,...,6} {
+        \draw (10+\i,0) -- (10+\i,7);
+        \draw (10,\i) -- (17,\i);
+    }
+
+    % Fill the first row with red color
+    \foreach \i in {0,...,6} {
+        \fill[red, opacity=0.3] (10+\i,6) rectangle (11+\i,7);
+    }
+
+    % Loop symbol for the first row of Matrix A
+    \foreach \i in {0,...,6} {
+        \draw[->] (10.5+\i,6.5) to[bend left=80] (10.5+\i,7.5) to[bend left=0] (10.5+\i,6.5);
+    }
+    \node at (13.5,8) {n-Mal jeweils};
+
+    % Matrix name
+    \node at (13.5,-0.5) {X};
+
+    % * symbol
+    \node at (18.5,3.5) {*};
+
+    % Matrix B
+    \draw (20,0) rectangle (27,7);
+    \foreach \i in {1,...,6} {
+        \draw (20+\i,0) -- (20+\i,7);
+        \draw (20,\i) -- (27,\i);
+    }
+    \foreach \i in {0,...,6} {
+        \foreach \j in {0,...,6} {
+            \fill[red, opacity=0.3] (20+\i,6-\j) rectangle (21+\i,7-\j);
+        }
+    }
+    % Matrix name
+    \node at (23.5,-0.5) {Y};
+
+    % Zigzag line with arrow
+    \node at (23.5,-0.5) {Y};
+    \draw[->] (20.5,6.5) -- (26.5,6.5) -- (20.5,5.5) -- (26.5,5.5) -- (20.5,4.5) -- (26.5,4.5) -- (20.5,3.5) -- (26.5,3.5) -- (20.5,2.5) -- (26.5,2.5) -- (20.5,1.5) -- (26.5,1.5) -- (20.5,0.5) -- (26.5,0.5);
+    \node at (29,3.5) {n-Mal};
+
+\end{tikzpicture}
+
+
+In der zweiten Implementierung wird immer die Zeile übersprungen, 
+wenn ein neues Element geladen wird. Dies führt dazu, 
+dass die zweite Implementierung bei jedem neuen Element eine neue Cache Line laden muss. 
+In Abbildung 12 ist das Verhalten der zweiten Implementierung dargestellt.\\
+\textbf{Abbildung 12: Visualisierung der zweiten Implementierung}
 
 
 
 
+\begin{adjustbox}{left}
+    \begin{tikzpicture}[scale=0.275]
+        % Matrix Z
+        \draw (0,0) rectangle (7,7);
+        \foreach \i in {1,...,6} {
+            \draw (\i,0) -- (\i,7);
+            \draw (0,\i) -- (7,\i);
+        }
+        \foreach \i in {0,...,6} {
+            \fill[red, opacity=0.3] (0,\i) rectangle (1,\i+1);
+        }
+        \node at (3.5,-0.5) {Z};
+    
+        % Loop symbol for Matrix Z
+        \draw[->] (0.5,6.5) to[bend right=30] (0.5,0.5) to[bend right=10] (0.5,6.3);
+        \node at (-2,3.5) {n-Mal};
+    
+        % += symbol
+        \node at (8.5,3.5) {+=};
+    
+        % Matrix X
+        \draw (10,0) rectangle (17,7);
+        \foreach \i in {1,...,6} {
+            \draw (10+\i,0) -- (10+\i,7);
+            \draw (10,\i) -- (17,\i);
+        }
+    
+        % Fill all elements with red color
+        \foreach \i in {0,...,6} {
+            \foreach \j in {0,...,6} {
+                \fill[red, opacity=0.3] (10+\i,\j) rectangle (11+\i,\j+1);
+            }
+        }
+    
+        % Zigzag line with arrow for Matrix X
+        \foreach \i in {0,...,5} {
+            \draw (10.5+\i,6.5) -- (10.5+\i,0.5) -- (11.5+\i,6.5);
+        }
+        \draw (15.5,6.5) -- (15.5,0.5) -- (16.5,6.5);
+        \draw[->] (16.5,6.5) -- (16.5,0.5);
+        \node at (13.5,8) {n-Mal};
+    
+        % Matrix name
+        \node at (13.5,-0.5) {X};
+    
+        % * symbol
+        \node at (18.5,3.5) {*};
+    
+        % Matrix Y
+        \draw (20,0) rectangle (27,7);
+        \foreach \i in {1,...,6} {
+            \draw (20+\i,0) -- (20+\i,7);
+            \draw (20,\i) -- (27,\i);
+        }
+        \foreach \i in {0,...,6} {
+            \fill[red, opacity=0.3] (20,6-\i) rectangle (21,7-\i);
+        }
+        % Matrix name
+        \node at (23.5,-0.5) {Y};
+        \node at (20.5,8) {n-Mal jeweils};
+    
+        % Loop symbol for the first column of Matrix Y
+        \foreach \i in {0,...,6} {
+            \draw[->] (20.5,6.5-\i) to[bend right=80] (19.5,6.5-\i) to[bend right=0] (20.5,6.5-\i);
+        }
+        
+        \end{tikzpicture}
+        \end{adjustbox}
 
 
-
-
+Bei ausreichend großen Matrizen kommt es zu ständigen Capacity Misses. 
+Die Anzahl dieser kann einfach approximiert werden, 
+indem man den einfachen Fall betrachtet, 
+dass jeweils eine Zeile oder Spalte für Z, X und Y im Cache gehalten werden kann.
+Es gibt $ \frac{\textnormal{n} \times \textnormal{n}}{\textnormal{L}} $ Cache Lines. 
+Das erstmalige Laden jeder Cache Line für Z ist ein Cold Miss, 
+aber die restlichen Zugriffe auf die gleiche Cache Line sind Capacity Misses. 
+Das bedeutet, es gibt $\textnormal{n} * \textnormal{n} * \textnormal{n} - \frac{\textnormal{n} \times \textnormal{n}}{\textnormal{L}} $ 
+Capacity Misses bei Z, wobei L die Anzahl der Elemente 
+in einer Cache Line ist.
+Bei X ist es ein ähnlicher Fall, da auch jedes Element nach einmaliger Nutzung in naher Zukunft verdrängt wird 
+und später wieder benötigt wird. 
+Es gibt also ebenfalls 
+$\textnormal{n} * \textnormal{n} * \textnormal{n} - \frac{\textnormal{n} \times \textnormal{n}}{\textnormal{L}} $ 
+Capacity Misses bei X.
+Bei Y wird jedes Element n-Mal genutzt, bevor die Cache Line verdrängt wird. 
+Daher kann man nur für jedes Element einen Capacity Miss zählen, 
+mit Ausnahme des ersten Elemente jeder Cache Line. Anders ausgedrückt, 
+es gibt $\textnormal{L} - 1 $ Capacity Misses pro Cache Line. 
+Da es $ \frac{n \times \textnormal{n}}{\textnormal{L}} $ Cache Lines gibt, 
+sind insgesamt $ \frac{\textnormal{n} \times \textnormal{n}}{\textnormal{L}} \times (\textnormal{L} - 1) $ Capacity Misses bei Y zu verzeichnen.
+Insgesamt ergeben sich also 
+$2 * \textnormal{n} * \textnormal{n} * \textnormal{n} - \frac{\textnormal{n} \times \textnormal{n}}{\textnormal{L}} + \frac{\textnormal{n} \times \textnormal{n}}{\textnormal{L}} \times (\textnormal{L} - 1) $ Capacity Misses.
+Bei der ersten Implementierung hingegen gibt es keine Capacity Misses bei Z, 
+da man stets eine Zeile für Z im Cache halten kann, ebenso wie bei X. 
+Bei Y durchläuft man die Matrix zwar auch in Row-Major-Order, 
+jedoch wird die erste Zeile nach der Bearbeitung der letzten verdrängt sein.
+In der ersten Implementierung iteriert man n-Mal durch die Matrix Y. 
+Der erste Durchlauf führt ausschließlich zu Cold Misses, 
+während in den folgenden Durchläufen lediglich das erste Element jeder Cache Line einen Capacity Miss verursacht. 
+Daher ergibt sich eine Gesamtzahl von $(\textnormal{n}-1) \times \frac{\textnormal{n} \times \textnormal{n}}{\textnormal{L}} $ Capacity Misses. 
+Da die Anzahl der Capacity Misses bei der zweiten Implementierung deutlich höher ist, 
+wird erwartet, dass die erste Implementierung, 
+insbesondere bei großen Werten von \texttt{n}, eine bessere Performance aufweist.
+In den Abbildungen 13 ist die Performance der beiden Implementierungen und die 4 restlichen 
+Möglichkeiten der Matrix-Matrix Multiplikation dargestellt.\\\\ % Hier muss ein Quelle hin!!
+\textbf{Abbildung 13: Performance der verschiedenen Implementierungen der Matrix-Matrix Multiplikation}
+\\\\\\\\
+Die zeitlichen Werte für die beiden vorgestellten Implementierungen, 
+die auf dem i7-9700K Prozessor erzielt wurden, sind in Abbildung 14 dargestellt.
+\textbf{Abbildung 14: Vergleich der beiden Implementierungen der Matrix-Matrix Multiplikation auf dem i7-9700K}
+\\\\
+In beiden Abbildungen ist zu erkennen das die Analyse der Zugriffsmuster und die Berechnung der Capacity Misses
+einen guten Hinweis darauf geben können welcher Code effizienter arbeitet und das das Zugriffsmuster starken
+Einfluss auf die Performance hat.
 
 
 
