@@ -154,8 +154,8 @@
 
 \section{Einleitung}
     Im letzten Jahrzehnt hat sich die Rechenleistung von Prozessoren erheblich gesteigert. 
-    In Abbildung 1 und 1.1 ist zu erkennen, dass seit der Einführung der 4th Generation im Jahr 2013 sich die Anzahl der Kerne bei Intel, 
-    die für den allgemeinen Verbrauchermarkt verfügbar sind, von 6 auf 24 Kernen erhöht hat.
+    In Abbildung 1 und 1.1 ist zu erkennen, dass seit der Einführung der 4th Generation im Jahr 2013 \cite{louis-2021} sich die Anzahl der Kerne bei Intel, 
+    die für den allgemeinen Verbrauchermarkt verfügbar sind, von 6 auf 24 Kernen erhöht hat. 
     Es ist wichtig zu beachten, dass es zwar Prozessoren mit einer noch höheren Anzahl von Kernen gibt, 
     diese jedoch in der Regel nicht für den Standard-Endverbraucher bestimmt sind. 
     Ebenso zeigt sich in den Abbildungen 2 und 2.1 ein Anstieg der maximalen Taktfrequenz über die Jahre. 
@@ -252,7 +252,8 @@
     dass diese Daten in naher Zukunft ebenfalls genutzt werden. 
     Typischerweise beträgt die Größe einer Cache-Zeile 64 Bytes, 
     kann aber durch die Befehle \texttt{getconf LEVEL1\_DCACHE\_LINESIZE}, 
-    \texttt{getconf LEVEL2\_CACHE\_LINESIZE}, \texttt{getconf LEVEL3\_CACHE\_LINESIZE} 
+    \texttt{getconf LEVEL2\_CACHE\_LINESIZE},
+    \texttt{getconf LEVEL3\_CACHE\_LINESIZE} 
     leicht bestimmt werden. Um die Größe des Caches zu ermitteln, 
     kann man den Befehl \texttt{lstopo} verwenden, sofern installiert. 
     Betrachtet man Abbildung 5, ist % hier muss ein Quellenverweis hin
