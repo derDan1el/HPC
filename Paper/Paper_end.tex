@@ -51,6 +51,7 @@
   \providecommand\BibTeX{{%
     Bib\TeX}}}
 \usepackage{listings}
+\usepackage{graphicx}
 \usepackage{placeins}
 \usepackage{amsmath}
 \let\Bbbk\relax
@@ -337,43 +338,43 @@
     Um die Auswirkungen des Speicherzugriffsmusters zu demonstrieren, sind hier zwei C++ 
     Varianten einer Matrix Vektor Multiplikation dargestellt. Die Elemente der Matrizen sind 
     in Row Major abgespeichert und die Matrizen sind quadratisch und gleich groß.
-    
-    \begin{adjustwidth}{-0,5cm}{}
-    \begin{footnotesize}
-    \begin{minted}{cpp}
 
-    void gemm_mkn(double* X, double* Y, double* Z, std::size_t n)
+    
+\begin{tiny}
+\begin{adjustwidth}{-0,37cm}{}
+\begin{footnotesize}
+\begin{minted}[linenos, gobble=2,xleftmargin=0.55cm, numbersep=1pt]{cpp}
+    void gemm_mkn(double* X, double* Y, double* Z, std::size_t n){
+
+    for (std::size_t l_m = 0; l_m < n; l_m++)
     {
-        for (std::size_t l_m = 0; l_m < n; l_m++)
+        for (std::size_t l_k = 0; l_k < n; l_k++)
         {
-            for (std::size_t l_k = 0; l_k < n; l_k++)
+            for (std::size_t l_n = 0; l_n < n; l_n++)
             {
-                for (std::size_t l_n = 0; l_n < n; l_n++)
-                {
-                    Z[l_m * n + l_n] += X[l_m * n + l_k] * Y[l_k * n + l_n];
-                }
+               Z[l_m * n + l_n] += X[l_m * n + l_k] * Y[l_k * n + l_n];
             }
         }
     }
+    }
     
-    void gemm_nkm(double* X, double* Y, double* Z, std::size_t n)
+    void gemm_nkm(double* X, double* Y, double* Z, std::size_t n){
+    
+    for (std::size_t l_n = 0; l_n < n; l_n++)
     {
-    
-        for (std::size_t l_n = 0; l_n < n; l_n++)
+        for (std::size_t l_k = 0; l_k < n; l_k++)
         {
-            for (std::size_t l_k = 0; l_k < n; l_k++)
+            for (std::size_t l_m = 0; l_m < n; l_m++)
             {
-                for (std::size_t l_m = 0; l_m < n; l_m++)
-                {
-                    Z[l_m * n + l_n] += X[l_m * n + l_k] * Y[l_k * n + l_n];
-                }
+               Z[l_m * n+ l_n] += X[l_m * n + l_k] * Y[l_k * n + l_n];
             }
         }
     }
-    \end{minted}
-    \end{footnotesize}
-    \end{adjustwidth}
-
+    }
+\end{minted}
+\end{footnotesize}
+\end{adjustwidth}
+\end{tiny}
 
 
 \,\\Um zu entscheiden welcher der beiden Implementierungen effizienter ist,
@@ -575,6 +576,53 @@ die auf dem i7-9700K Prozessor erzielt wurden, sind in Abbildung 14 dargestellt.
 In beiden Abbildungen ist zu erkennen das die Analyse der Zugriffsmuster und die Berechnung der Capacity Misses
 einen guten Hinweis darauf geben können welcher Code effizienter arbeitet und das das Zugriffsmuster starken
 Einfluss auf die Performance hat.
+
+\section{Loop Unrolling}
+
+
+
+
+\section{Das Transponieren einer Matrix}
+
+Die intuitive Lösung zum Transponieren einer beispielsweise quadratischen Matrix ist im folgenden C++ Code dargestellt.
+(Die Elemente sind in Row-Major-Order abgespeichert)\\
+
+\begin{minted}[linenos, gobble=2,xleftmargin=0.2cm, numbersep=1pt]{cpp}
+    void transpose(double* A, double* B, std::size_t n)
+    {
+        for (std::size_t l_y = 0; l_y < n; l_y++)
+        {
+            for (std::size_t l_x = 0; l_x < n; l_x++)
+            {
+                B[l_x * n + l_y] = A[l_y * n + l_x];
+            }
+        }
+    }
+\end{minted}
+\,\\
+Diese Implementierung durchläuft Matrix A zeilenweise und fügt Elemente spaltenweise in Matrix B ein,
+was zu strided Store-Operationen führt. Diese sind in der Regel teurer als strided Load-Operationen,
+da bei einem Cache-Miss die Cache-Zeile geladen und nach einer Änderung 
+zurück in den langsameren Speicher geschrieben werden muss, statt sie einfach zu verwerfen.
+Die erste Optimierung besteht darin, in Zeile 7 die Load-Operation strided zu wählen:
+
+\begin{minted}{cpp}
+B[l_y * n + l_x] = A[l_x * n + l_y];
+\end{minted}
+\,\\
+In der folgenden Abbildung ist der Vergleich der beiden Implementierungen auf dem i7-9700K dargestellt und 
+es ist zu erkennen, dass die strided Load Implementierung im Allgemeinen eine höhere Bandbreite aufweist.
+\begin{figure}[h]
+    \hspace{-0.46cm} % Passen Sie diesen Wert an, um das Bild zu verschieben
+    \includegraphics[width=0.46\textwidth]{/home/daniel/HPC/all_plots/Abbildung_15.png}
+    \caption{}
+    \label{fig:mein_bild}
+\end{figure}
+
+Die effektive Bandbreite bei großen Datenmengen liegt bei ca 10 GB/s.
+
+
+
 
 
 
