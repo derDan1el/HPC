@@ -45,32 +45,36 @@
 %% for your publication.
 %%
 %%
-\documentclass[sigconf,language=english]{acmart}
+\documentclass[sigconf,language=ngerman]{acmart}
 
 \AtBeginDocument{%
   \providecommand\BibTeX{{%
     Bib\TeX}}}
-\usepackage{listings}
-\usepackage{graphicx}
-\usepackage{placeins}
-\usepackage{amsmath}
-\let\Bbbk\relax
-\usepackage{amssymb}
-\usepackage{amsfonts}
-\usepackage{hyperref}
-\usepackage[export]{adjustbox}
-\usepackage{minted}
-\usepackage{changepage}
-\usepackage{tikz}
-\usetikzlibrary{decorations.pathmorphing}
-
+    \usepackage{listings}
+    \usepackage{graphicx}
+    \usepackage{placeins}
+    \usepackage{amsmath}
+    \let\Bbbk\relax
+    \usepackage{amssymb}
+    \usepackage{amsfonts}
+    \usepackage{hyperref}
+    \usepackage[export]{adjustbox}
+    \usepackage{minted}
+    \usepackage{changepage}
+    \usepackage{tikz}
+    \usetikzlibrary{decorations.pathmorphing}
+    \usepackage{caption}
+    \usepackage{newfloat}
+    \usepackage[ngerman]{babel}
+    \usetikzlibrary{arrows.meta}
+    \usetikzlibrary{matrix}
 %% Rights management information.  This information is sent to you
 %% when you complete the rights form.  These commands have SAMPLE
 %% values in them; it is your responsibility as an author to replace
 %% the commands and values with those provided to you when you
 %% complete the rights form.
 
-
+\DeclareFloatingEnvironment[fileext=loa, listname={List of Auflistungen}, name=Auflistung, placement=htp,]{auflistung}
 
 %%
 %% These commands are for a JOURNAL article.
@@ -113,7 +117,7 @@
 %%
 %% The "title" command has an optional parameter,
 %% allowing the author to define a "short title" to be used in page headers.
-\title{Data Access}
+\title{Optimierung des Datenzugriffs}
 
 %%
 %% The "author" command and its associated commands are used to define
@@ -125,22 +129,22 @@
 
 \author{Daniel Schicker}
 \affiliation{%
-  \institution{Friedrich Schiller Universität}
-  \city{Jena}
-  \country{Deutschland}}
+  \institution{Friedrich-Schiller-Universität Jena}
+  \city{}
+  \country{}}
 \email{schicker.daniel@uni-jena.de}
 
 \begin{abstract}
     Die Art und Weise, wie auf Daten zugegriffen wird,
     kann einen erheblichen Einfluss auf die Performance eines Algorithmus haben.
-    Insbesondere wenn große Datenmengen häufig zwischen langsamen Speichermedien und dem Prozessor ausgetauscht werden,
+    Insbesondere wenn große Datenmengen häufig zwischen Hauptspeicher und dem Prozessor ausgetauscht werden,
     spricht man häufig von einem Engpass des Speicherinterfaces.
-    Durch effiziente Datenzugriffe und optimale Nutzung des Caches 
-    kann nicht nur die Performance signifikant gesteigert werden, 
-    sondern es wird auch sichergestellt, 
-    dass die Leistungsfähigkeit selbst bei der Verarbeitung großer Datenmengen stabil bleibt.
+    Durch effiziente Datenzugriffe und optimale Nutzung aller Cache Ebenen lässt 
+    sich nicht nur die Leistung signifikant steigern. Selbst bei großen Datenmengen, 
+    die die Größe der Cache-Ebenen überschreiten, wird gewährleistet, 
+    dass alle Cache Ebenen weiterhin effizient genutzt werden (siehe Blocking). 
     In diesem Paper werden Methoden wie Loop Unrolling, Loop Fusion, Blocking analysiert.
-    Um die Effektivität mancher Methoden zu demonstrieren, werden diese gebenchmarkt und mit den Standardmethoden verglichen.
+    Um die Effektivität der Methoden zu demonstrieren, werden diese gebenchmarkt und mit den unoptimierten Implementierungen verglichen.
 \end{abstract}
 
 \maketitle
@@ -154,21 +158,56 @@
 
 
 \section{Einleitung}
-    Im letzten Jahrzehnt hat sich die Rechenleistung von Prozessoren erheblich gesteigert. 
-    In Abbildung 1 und 1.1 ist zu erkennen, dass seit der Einführung der 4th Generation im Jahr 2013 \cite{louis-2021} sich die Anzahl der Kerne bei Intel, 
-    die für den allgemeinen Verbrauchermarkt verfügbar sind, von 6 auf 24 Kernen erhöht hat. 
+\begin{figure}[ht]
+\hspace{-0.6cm}
+\caption{\textbf{Anzahl der Kerne pro Prozessor-Generation von Intel} (Datenquelle: \cite{Comparison})}
+\includegraphics[width=0.49\textwidth]{Abbildung_1.png}
+\label{fig:Abbildung_1}
+\end{figure}
+
+\begin{figure}[ht]
+\hspace{-0.6cm}
+\caption{\textbf{Anzahl der Kerne der X-series pro Prozessor-Generation von Intel} (Datenquelle: \cite{Comparison})}
+\includegraphics[width=0.49\textwidth]{Abbildung_2.png}
+\label{fig:Abbildung_2} 
+\end{figure}
+
+
+\setlength{\parindent}{0pt}
+    In Abbildung \ref{fig:Abbildung_1} und Abbildung \ref{fig:Abbildung_2} ist zu erkennen, 
+    dass seit der Einführung der 4th Generation (Haswell) im Jahr 2013 \cite{intel-4th-gen-core} sich die Anzahl der Kerne bei Intel, 
+    für Desktop Computer, von 6 auf 24 Kernen erhöht hat. 
     Es ist wichtig zu beachten, dass es zwar Prozessoren mit einer noch höheren Anzahl von Kernen gibt, 
-    diese jedoch in der Regel nicht für den Standard-Endverbraucher bestimmt sind. 
-    Ebenso zeigt sich in den Abbildungen 2 und 2.1 ein Anstieg der maximalen Taktfrequenz über die Jahre. 
+    diese jedoch in der Regel für Server bestimmt sind.
+    In der Abbildung \ref{fig:Abbildung_last} ist jedoch zu erkennen, dass die Gigahertz-Werte stagnieren.
+\begin{figure}[ht]
+\hspace{-0.6cm}
+\caption{\textbf{Vergleich der Entwicklung der Speicherbandbreite und max. Rechenleistung} (Datenquellen: \cite{prozessoren})}
+\includegraphics[width=0.49\textwidth]{Abbildung_3.png}
+\label{fig:Abbildung_3}
+\end{figure}
     Wenn man nun die theoretische maximale Rechenleistung, 
-    definiert als:\\ $\textnormal{P}_{\textnormal{max}} = \text{Anzahl der Kerne} \times \text{Turbo Taktfrequenz} \times \text{Flops pro Taktzyklus}$,\\und
-    der Entwicklung der Speicherbandbreite gegenüberstellt, wird in Abbildung 3 deutlich, 
+    definiert als:\\ $\textnormal{P}_{\textnormal{max}} = \textnormal{Anzahl der Kerne } \times \textnormal{ Turbo Taktfrequenz } \times \\\textnormal{ Flops pro Taktzyklus } \times \textnormal{ Anzahl der Instruktionssets}$,\\und
+    der Entwicklung der Speicherbandbreite gegenüberstellt, wird in Abbildung \ref{fig:Abbildung_3} deutlich, 
     dass die Zunahme der Speicherbandbreite nicht im gleichen Maße wie die Rechenleistung ansteigt. 
-    Im Detail hat sich die Bandbreite von 51.2 $\frac{\text{GByte}}{\text{s}}$ im Jahr 2013 auf 89.6 $\frac{\text{GByte}}{\text{s}}$ im Jahr 2024 erhöht. 
-    Parallel dazu ist die Performance im gleichen Zeitraum von 187.2 $\frac{\text{Flops}}{\text{s}}$ auf 1945.6 $\frac{\text{Flops}}{\text{s}}$ gestiegen. 
+    Im Detail hat sich die Bandbreite von dem i7-3960X von 51.2 $\frac{\text{GByte}}{\text{s}}$ im Jahr 2013 auf 89.6 $\frac{\text{GByte}}{\text{s}}$ bei dem i9-14900KS im Jahr 2024 erhöht. 
+    Parallel dazu hat sich die theoretische maximale Rechenleistung im gleichen Zeitraum von 158.4 $\frac{\text{Flops}}{\text{s}}$ auf 512 $\frac{\text{Flops}}{\text{s}}$ gestiegen.
+    In Abbildung \ref{fig:Abbildung_3} ist ein Flop definiert als eine Gleitkommazahl-Operation mit einer FP32-Zahl.
+    Die Werte für die drei Prozessoren i9-7980XE, 
+    i9-9980XE und i9-10980XE scheinen inkonsistent mit dem erwarteten Entwicklungstrend zu sein.
+    Der Grund dafür ist, 
+    dass diese drei Prozessoren über zwei 512-Bit-Instruktionssets verfügen. 
+    Dies erhöht das Ergebnis der maximalen Rechenleistung erheblich im Vergleich zu den anderen Prozessoren, 
+    die lediglich über ein AVX2 256-Bit-Instruktionsset verfügen.
     Diese Diskrepanz zwischen der gesteigerten Rechenleistung und der vergleichsweise langsamer wachsenden Speicherbandbreite 
     verdeutlicht die Notwendigkeit einer Optimierung von Datenzugriffen. 
     Ein effizienter Einsatz des Caches ist dabei unerlässlich, um die Leistung zu maximieren.
+    Des Weiteren arbeitet der Intel® AMX, 
+    eine spezielle Hardware-Komponente in Intel® Xeon® Scalable Prozessorkernen, 
+    daran, 
+    Matrix-Mathematik-basierte Deep-Learning-Workloads zu optimieren und zu beschleunigen. 
+    Es erreicht dies, indem es mehr Daten pro Kern speichert und größere Matrizen in einer einzigen Operation berechnet, 
+    ohne die Notwendigkeit, Workloads auf einen separaten Beschleuniger auszulagern \cite{TMUL}.
 
     \section{Die Berechnung der Performancegrenzen}
     In den nachfolgenden Unterabschnitten werden die Formeln vorgestellt, 
@@ -178,7 +217,6 @@
     dass alle Ressourcen vollständig ausgeschöpft werden die die CPU zu bieten hat. 
     Zudem basieren die Formeln auf Aspekten des idealen Cache-Modells, 
     wie einem unendlich schnellen Cache und der Nichtexistenz von Latenzzeiten.
-
 
     \subsection{Maschinenbalance}
 
@@ -323,69 +361,98 @@
     Performance zu $\textnormal{P} =  \min(\textnormal{P}_{\textnormal{max}}, 
     \frac{\textnormal{b}_{\textnormal{Stream}}}{\textnormal{B}_{\textnormal{c}}})$ abändern.
 
-\section{Das Beachten des Speicherzugriffsmusters}
-    Bei zwei Dimensionalen Arrays bestimmt die Programmiersprache die Reihenfolge 
-    in der die Elemente im Speicher abgelegt werden. Fortran, Julia und R werden beispielsweise
-    in Column-Major-Order abgelegt, während C++ in Row-Major-Order abgelegt wird.
-    Greift man auf ein Element zu, dann wird die zugehörige Cache Line geladen.
+\section{Die Optimierung des Speicherzugriffsmusters}
+    In Computern werden Daten linear im Speicher abgelegt, das heißt, sie werden in einer sequenziellen Reihenfolge gespeichert, 
+    wobei zum Beispiel ein Byte eine eindeutige Adresse hat, die auf den genauen Speicherort verweist. Diese lineare Anordnung ermöglicht es, 
+    effizient auf Daten zuzugreifen, 
+    indem man die Adresse des gewünschten Datenstücks kennt oder berechnet.
+    Greift man auf ein Element zu, dann wird die zugehörige Cache Line geladen, wenn die Cache Line sich noch nicht im Cache befindet.
     Im besten Fall werden anschließend alle Elemente der Cache Line abgerufen dann die Cache Line verdrängt 
     und nie wieder benötigt. Im schlechtesten Fall wird die Cache Line verdrängt bevor alle Elemente abgerufen wurden 
     oder sogar nur ein Element genutzt, wodurch der Zweck des Caches verfehlt wird.
     In Abbildung 10 ist ein Beispiel für ein 2D Array in Row-Major-Order dargestellt. % Hier muss ein Quellenverweis!!!!! hin.
     Würde man in dieser Matrix Spaltenweise auf die Elemente zugreifen,
-    dann würde jeder Zugriff das Laden einer neuen Cache Line erfordern, was man Strided Zugriff nennt, 
+    dann würde jeder Zugriff das Laden einer neuen Cache Line erfordern, 
     weil man restlichen Elemente der Zeile überspringt.
-    Um die Auswirkungen des Speicherzugriffsmusters zu demonstrieren, sind hier zwei C++ 
-    Varianten einer Matrix Vektor Multiplikation dargestellt. Die Elemente der Matrizen sind 
+    Die Schrittweite von einem Zugriff nennt man Stride.
+    Überspringt man beispielsweise n Elemente, dann dann ist das ein Stride von n Elementen.
+    Um die Auswirkungen des Speicherzugriffsmusters zu demonstrieren, sind hier (\hyperref[fig:Zeilenorientierte Matrix Matrix Multiplikation]{klicke hier}) zwei C++ 
+    Varianten einer Matrix Matrix Multiplikation dargestellt. Die Elemente der Matrizen sind 
     in Row Major abgespeichert und die Matrizen sind quadratisch und gleich groß.
 
-    
-\begin{tiny}
-\begin{adjustwidth}{-0,37cm}{}
-\begin{footnotesize}
-\begin{minted}[linenos, gobble=2,xleftmargin=0.55cm, numbersep=1pt]{cpp}
-    void gemm_mkn(double* X, double* Y, double* Z, std::size_t n){
 
-    for (std::size_t l_m = 0; l_m < n; l_m++)
-    {
-        for (std::size_t l_k = 0; l_k < n; l_k++)
+\begin{tiny}
+    \begin{adjustwidth}{-0,37cm}{}
+    \begin{footnotesize}
+    \begin{auflistung}
+    \caption{Zeilenorientierte Matrix Matrix Multiplikation}
+    \label{fig:Zeilenorientierte Matrix Matrix Multiplikation}
+    \begin{minted}[linenos, gobble=2,xleftmargin=-0.3cm, numbersep=-12pt]{cpp}
+        void gemm_mkn(double* X, double* Y, double* Z, std::size_t n){
+    
+        for (std::size_t l_m = 0; l_m < n; l_m++)
         {
-            for (std::size_t l_n = 0; l_n < n; l_n++)
+            for (std::size_t l_k = 0; l_k < n; l_k++)
             {
-               Z[l_m * n + l_n] += X[l_m * n + l_k] * Y[l_k * n + l_n];
+                for (std::size_t l_n = 0; l_n < n; l_n++)
+                {
+                   Z[l_m * n + l_n] += X[l_m * n + l_k] * Y[l_k * n + l_n];
+                }
             }
         }
-    }
-    }
-    
-    void gemm_nkm(double* X, double* Y, double* Z, std::size_t n){
-    
-    for (std::size_t l_n = 0; l_n < n; l_n++)
-    {
-        for (std::size_t l_k = 0; l_k < n; l_k++)
+        }
+        
+    \end{minted}
+    \end{auflistung}
+    Die Elemente von Z, X und Y werden für die Matrix Matrix Multiplikation mit einem \\
+    \hspace*{0.36cm}Stride-N-Muster abgerufen.
+    \end{footnotesize}
+    \end{adjustwidth}
+    \end{tiny}
+
+
+    \label{fig:Spaltenorientierte Matrix Matrix Multiplikation}
+\begin{tiny}
+    \begin{adjustwidth}{-0,37cm}{}
+    \begin{footnotesize}
+    \begin{auflistung}
+    \caption{Zeilenorientierte Matrix Matrix Multiplikation}
+    \begin{minted}[linenos, gobble=2,xleftmargin=-0.3cm, numbersep=-12pt]{cpp}
+        void gemm_nkm(double* X, double* Y, double* Z, std::size_t n){
+
+        for (std::size_t l_n = 0; l_n < n; l_n++)
         {
-            for (std::size_t l_m = 0; l_m < n; l_m++)
+            for (std::size_t l_k = 0; l_k < n; l_k++)
             {
-               Z[l_m * n+ l_n] += X[l_m * n + l_k] * Y[l_k * n + l_n];
+                for (std::size_t l_m = 0; l_m < n; l_m++)
+                {
+                   Z[l_m * n+ l_n] += X[l_m * n + l_k] * Y[l_k * n + l_n];
+                }
             }
         }
-    }
-    }
-\end{minted}
-\end{footnotesize}
-\end{adjustwidth}
-\end{tiny}
+        }
+    \end{minted}
+    \end{auflistung}
+    Die Elemente von Z, X und Y werden für die Matrix Matrix Multiplikation mit einem \\
+    \hspace*{0.36cm}Stride-N-Muster abgerufen.
+    \end{footnotesize}
+    \end{adjustwidth}
+    \end{tiny}
+
 
 
 \,\\Um zu entscheiden welcher der beiden Implementierungen effizienter ist,
 ohne sie zu benchmarken kann man sich jeweils die Zugriffsmuster ansehen.
-In der ersten Implementierung greift Z mit einem $\textnormal{Stride-1}$  auf die Elemente zu,
-dabei wird die selbe Zeile n-Mal durchgelaufen bis die nächste Zeile bei Z bearbeitet wird.
-X greift n-Mal auf das selbe Element zu bevor es mit einem Stride-1 auf das nächste Element zugreift.
-Man bleibt somit bei X auch in der selben Zeile also in der selben Cache Line.
-Y arbeitet sich Zeilenweise durch die Matrix und wiederholt jenes n-Mal. Die folgende Abbildung
-zeigt nochmal das Verhalten des Algorithmus.\\\textbf{Abbildung 11: Visualisierung der ersten Implementierung}
-
+In der ersten Implementierung wird auf die Elemente von Z mit einem $\textnormal{Stride-1}$ zugegriffen,
+dabei wird die selbe Zeile n-Mal durchlaufen bis die nächste Zeile bearbeitet wird.
+Auf das gleiche Element von X wird n-Mal zugegriffen, bevor mit einem Stride-1 auf das nächste Element zugegriffen wird.
+Dabei bleibt man bei X auch in der selben Zeile, also in der selben Cache Line.
+Bei Y wird sich zeilenweise durch die Matrix gearbeitet und dies n-Mal wiederholt. Die Abbildung \ref{fig:Visualisierung der ersten Implementierung}
+zeigt nochmal das Verhalten des Algorithmus.
+Es ist wichtig zu beachten, dass eine Cache Line deutlich kleiner ist als eine Zeile/Spalte und dass dies lediglich ein Modell darstellt, 
+keine direkte Abbildung einer Matrix-Matrix-Multiplikation.\\
+\textbf{Abbildung 5: Visualisierung der ersten Implementierung}
+\label{fig:Visualisierung der ersten Implementierung}
 
 \begin{tikzpicture}[scale=0.28]
     % Matrix C
@@ -452,17 +519,18 @@ zeigt nochmal das Verhalten des Algorithmus.\\\textbf{Abbildung 11: Visualisieru
 \end{tikzpicture}
 
 
-In der zweiten Implementierung wird immer die Zeile übersprungen, 
+In der zweiten Implementierung \ref{fig:Spaltenorientierte Matrix Matrix Multiplikation} wird immer die Zeile übersprungen, 
 wenn ein neues Element geladen wird. Dies führt dazu, 
 dass die zweite Implementierung bei jedem neuen Element eine neue Cache Line laden muss. 
-In Abbildung 12 ist das Verhalten der zweiten Implementierung dargestellt.\\
+In Abbildung \ref{fig:Visualisierung der zweiten Implementierung} ist das Verhalten der zweiten Implementierung dargestellt.
+Es ist wichtig zu beachten, dass eine Cache Line deutlich kleiner ist als eine Zeile/Spalte und dass dies lediglich ein Modell darstellt, 
+keine direkte Abbildung einer Matrix-Matrix-Multiplikation.
 \textbf{Abbildung 12: Visualisierung der zweiten Implementierung}
 
 
-
-
+\label{fig:Visualisierung der zweiten Implementierung}
 \begin{adjustbox}{left}
-    \begin{tikzpicture}[scale=0.275]
+    \begin{tikzpicture}[scale=0.275, >={Stealth[length=10pt, width=3pt]}]
         % Matrix Z
         \draw (0,0) rectangle (7,7);
         \foreach \i in {1,...,6} {
@@ -565,29 +633,131 @@ Daher ergibt sich eine Gesamtzahl von $(\textnormal{n}-1) \times \frac{\textnorm
 Da die Anzahl der Capacity Misses bei der zweiten Implementierung deutlich höher ist, 
 wird erwartet, dass die erste Implementierung, 
 insbesondere bei großen Werten von \texttt{n}, eine bessere Performance aufweist.
-In den Abbildungen 13 ist die Performance der beiden Implementierungen und die 4 restlichen 
+In den Abbildungen \ref{Performance der verschiedenen Implementierungen der Matrix-Matrix Multiplikation} ist die Performance der beiden Implementierungen und die 4 restlichen 
 Möglichkeiten der Matrix-Matrix Multiplikation dargestellt.\\\\ % Hier muss ein Quelle hin!!
-\textbf{Abbildung 13: Performance der verschiedenen Implementierungen der Matrix-Matrix Multiplikation}
-\\\\\\\\
-Die zeitlichen Werte für die beiden vorgestellten Implementierungen, 
-die auf dem i7-9700K Prozessor erzielt wurden, sind in Abbildung 14 dargestellt.
-\textbf{Abbildung 14: Vergleich der beiden Implementierungen der Matrix-Matrix Multiplikation auf dem i7-9700K}
-\\\\
+
+
+\begin{figure}[ht]
+    \centering
+    \caption{Bandbreitenergebnisse der verschiedenen Implementierungen der Matrix-Matrix Multiplikation}
+    \includegraphics[width=0.4\textwidth]{Abbildung 13.png}
+    \label{Performance der verschiedenen Implementierungen der Matrix-Matrix Multiplikation}
+    \end{figure}
+(Quelle : \cite{Breuer_Benchmark_PC1})
+
+Die zeitlichen Werte für die beiden vorgestellten Implementierungen \ref{fig:Zeilenorientierte Matrix Matrix Multiplikation} und \ref{fig:Spaltenorientierte Matrix Matrix Multiplikation}, 
+die auf dem i7-9700K Prozessor erzielt wurden, sind in Abbildung \ref{Performance der beiden Implementierungen der Matrix-Matrix Multiplikation} dargestellt.
+
+\begin{figure}[ht]
+    \centering
+    \caption{Zeitliche Ergebnisse der verschiedenen Implementierungen der Matrix-Matrix Multiplikation}
+    \includegraphics[width=0.4\textwidth]{Abbildung 14.png}
+    \label{Performance der beiden Implementierungen der Matrix-Matrix Multiplikation}
+    \end{figure}
 In beiden Abbildungen ist zu erkennen das die Analyse der Zugriffsmuster und die Berechnung der Capacity Misses
 einen guten Hinweis darauf geben können welcher Code effizienter arbeitet und das das Zugriffsmuster starken
-Einfluss auf die Performance hat.
+Einfluss auf die Leistung hat.
 
-\section{Loop Unrolling}
 
+
+\section{Unroll and Jam}
+\begin{figure}[ht]
+    \centering
+    \caption{Zugriffsmuster von einer Matrix Vektor Multiplikation \cite{hager-2010}}
+    \includegraphics[width=0.4\textwidth]{Abbildung 16.png}
+    \label{MVM Zugriffsmuster}
+    \end{figure}
+
+    \begin{tiny}
+        \begin{adjustwidth}{-0,37cm}{}
+        \begin{footnotesize}
+        \begin{auflistung}
+        \caption{Zeilenorientierte Matrix Matrix Multiplikation}
+        \label{MVM Code}
+        \begin{minted}[linenos, gobble=2,xleftmargin=-0.3cm, numbersep=-12pt]{cpp}
+            void MVM(double* A, double* B, double* C, std::size_t n){
+
+                for (std::size_t l_i = 0; l_i < n; l_i++)
+                {
+                    for (std::size_t l_j = 0; l_j < n; l_j++)
+                    {
+                        C[l_i] += A[l_i * n + l_j] * B[l_j]; 
+                    }
+                }
+            }
+            
+        \end{minted}
+        \end{auflistung}
+        \end{footnotesize}
+        \end{adjustwidth}
+        \end{tiny}
+
+Gegeben ist eine unoptimierte Implementierung einer Matrix-Vektor-Multiplikation,
+die in Abbildung \ref{MVM Zugriffsmuster} dargestellt ist und
+analysieren den zugehörigen Code in Auflistung \ref{MVM Code}.
+Jedes Element von C wird n-Mal wiederholt verwendet, bevor das nächste Element mit einem Stride-1 geladen wird.
+Array A wid ein mal durchlaufen aber für jede äußere Schleifeniteration wird einmal durch das Array B iteriert.
+Um die Anzahl der Ladevorgänge für B zu reduzieren, 
+kann man die Technik Unroll and Jam anwenden.
+Dabei wird die äußere Schleife nicht mehr um eins, 
+sondern um \(m\) inkrementiert. 
+
+
+In der inneren for-Schleife wird dann der Code \(m\)-mal repliziert.
+Dies bedeutet, dass für jede Iteration der äußeren Schleife \(m\) 
+Berechnungen gleichzeitig durchgeführt werden. Das Ergebnis 
+
+\begin{tiny}
+    \begin{adjustwidth}{-0,37cm}{}
+    \begin{footnotesize}
+    \begin{auflistung}
+    \caption{Implementierung der Matrix-Vektor-Multiplikation mit Unroll and Jam}
+    \label{MVM Code}
+    \begin{minted}[linenos, gobble=2,xleftmargin=-0.3cm, numbersep=-12pt]{cpp}
+        void MVM(double* A, double* B, double* C, std::size_t n, std::size_t l_m){
+
+        for (std::size_t l_i = 0; l_i < n;l_i = l_i + l_m)
+        {
+            for (std::size_t l_j = 0; l_j < n; l_j++)
+            {
+                C[l_i] = C[l_i] + A[l_i * n + l_j] * B[l_j]
+                C[l_i] = C[l_i+1] + A[(l_i+1) * n + l_j] * B[l_j]
+                //! m times ...
+                C[l_i + l_m-1] = C[i+m-1] + A[(l_i+m-1) * n + l_j] * B[l_j]
+            }
+        }
+
+        }
+        
+    \end{minted}
+    \end{auflistung}
+    \end{footnotesize}
+    \end{adjustwidth}
+    \end{tiny}
+
+
+
+
+
+Wir nehmen der Einfachheit halber an, dass $\textnormal{n}\%\textnormal{m} = 0$ und dass $\textnormal{m} = 0$ nicht zu groß gewählt wird.
+All dies setzt jedoch voraus, 
+dass der Registerdruck nicht zu groß ist, 
+also dass die CPU genügend Register hat, 
+um alle benötigten Operanden in dem nun größeren Schleifenkörper zu halten. Wenn dies nicht der Fall ist, muss der Compiler Registerdaten in den Cache auslagern, 
+was die Berechnung verlangsamt.Hier können Compiler-Protokolle helfen, eine solche Situation zu identifizieren \cite{hager-2010v2}.
+In Auflistung \ref{MVM Code} wird nun jedes Element von B \(m\)-mal verwendet in der inneren Schleife, bevor das nächste Element geladen wird.
+Anders gesagt reduziert sich die Anzahl der Ladevorgänge für B von $\textnormal{n} \times \textnormal{n} $ auf $\frac{\textnormal{n} \times \textnormal{n}}{\textnormal{m}}$.
 
 
 
 \section{Das Transponieren einer Matrix}
-
-Die intuitive Lösung zum Transponieren einer beispielsweise quadratischen Matrix ist im folgenden C++ Code dargestellt.
-(Die Elemente sind in Row-Major-Order abgespeichert)\\
-
-\begin{minted}[linenos, gobble=2,xleftmargin=0.2cm, numbersep=1pt]{cpp}
+\begin{tiny}
+    \begin{adjustwidth}{-0,37cm}{}
+    \begin{footnotesize}
+    \begin{auflistung}
+    \caption{unoptimierte Version: Transponieren einer Matrix}
+    \label{Transponieren einer Matrix}
+    \begin{minted}[linenos, gobble=2,xleftmargin=-0.3cm, numbersep=-12pt]{cpp}
     void transpose(double* A, double* B, std::size_t n)
     {
         for (std::size_t l_y = 0; l_y < n; l_y++)
@@ -598,28 +768,202 @@ Die intuitive Lösung zum Transponieren einer beispielsweise quadratischen Matri
             }
         }
     }
-\end{minted}
+        
+    \end{minted}
+    \end{auflistung}
+    \end{footnotesize}
+    \end{adjustwidth}
+    \end{tiny}
+
+
+
+
+Die intuitive Lösung zum Transponieren einer beispielsweise quadratischen Matrix ist in Auflistung \ref{Transponieren einer Matrix} dargestellt.
+(Die Elemente sind in Row-Major-Order abgespeichert)
+
 \,\\
 Diese Implementierung durchläuft Matrix A zeilenweise und fügt Elemente spaltenweise in Matrix B ein,
 was zu strided Store-Operationen führt. Diese sind in der Regel teurer als strided Load-Operationen,
 da bei einem Cache-Miss die Cache-Zeile geladen und nach einer Änderung 
 zurück in den langsameren Speicher geschrieben werden muss, statt sie einfach zu verwerfen.
-Die erste Optimierung besteht darin, in Zeile 7 die Load-Operation strided zu wählen:
 
-\begin{minted}{cpp}
-B[l_y * n + l_x] = A[l_x * n + l_y];
-\end{minted}
-\,\\
-In der folgenden Abbildung ist der Vergleich der beiden Implementierungen auf dem i7-9700K dargestellt und 
+
+
+\begin{tiny}
+    \begin{adjustwidth}{-0,37cm}{}
+    \begin{footnotesize}
+    \begin{auflistung}
+    \caption{strided load Version: Transponieren einer Matrix}
+    \label{Transponieren einer Matrix strided load}
+    \begin{minted}[linenos, gobble=2,xleftmargin=-0.3cm, numbersep=-12pt]{cpp}
+    void transpose(double* A, double* B, std::size_t n)
+    {
+        for (std::size_t l_y = 0; l_y < n; l_y++)
+        {
+            for (std::size_t l_x = 0; l_x < n; l_x++)
+            {
+                B[l_y * n + l_x] = A[l_x * n + l_y];
+            }
+        }
+    }
+        
+    \end{minted}
+    \end{auflistung}
+    \end{footnotesize}
+    \end{adjustwidth}
+    \end{tiny}
+
+
+    \begin{figure}[h]
+        \hspace{-0.46cm} % Passen Sie diesen Wert an, um das Bild zu verschieben
+        \caption{Bandbreitenergebnisse}
+        \includegraphics[width=0.46\textwidth]{Abbildung 15.png}
+        \label{strided load vs. strided store}
+    \end{figure}
+Die erste Optimierung besteht darin, in Zeile 7 die Load-Operation strided zu wählen 
+siehe Auflistung \ref{Transponieren einer Matrix strided load}.
+Die Elemente von A werden nun spaltenweise geladen und in B zeilenweise gespeichert.
+In der Abbildung \ref{strided load vs. strided store} ist der Vergleich der Implementierungen auf dem i7-9700K dargestellt und 
 es ist zu erkennen, dass die strided Load Implementierung im Allgemeinen eine höhere Bandbreite aufweist.
+
+
+Die effektive Bandbreite bei der Verarbeitung großer Datenmengen, 
+die den L3-Cache überschreiten, beträgt etwa 10 GB/s. 
+Ein Hauptproblem bei der Arbeit mit großen Dimensionen besteht darin, 
+dass der Cache ständig überschrieben wird und Cachezeilen verdrängt werden, 
+obwohl sie in naher Zukunft erneut benötigt werden könnten.
+
+Bei großen Dimensionen führt das Stride-n Zugriffsmuster bei A häufig zu einem Cache-Miss, 
+was das Laden einer neuen Cachezeile erfordert. 
+Diese wird dann jedoch nur für ein einziges Element verwendet, 
+was die Bandbreite bei großen Dimensionen erheblich reduziert.
+
+
+\begin{tiny}
+    \begin{adjustwidth}{-0,37cm}{}
+    \begin{footnotesize}
+    \begin{auflistung}
+    \caption{Unroll und jam Version von: Transponierens einer Matrix}
+    \label{UNROLLANDJAMVERSIONTRANSPONIERENMATRIX}
+    \begin{minted}[linenos, gobble=2,xleftmargin=-0.3cm, numbersep=-12pt]{cpp}
+    for (size_t l_j = 0; l_j < array_size; l_j = l_j + 5)
+    {
+    for (size_t l_i = 0; l_i < array_size; l_i++)
+    {
+        array_B[l_j * array_size + l_i] = 
+        array_A[l_i * array_size + l_j];
+
+        array_B[(l_j + 1) * array_size + l_i] = 
+        array_A[l_i  * array_size + l_j + 1];
+
+        array_B[(l_j + 2) * array_size + l_i] = 
+        array_A[l_i  * array_size + l_j + 2];
+
+        array_B[(l_j + 3) * array_size + l_i] = 
+        array_A[l_i  * array_size + l_j + 3];
+        
+        array_B[(l_j + 4) * array_size + l_i] = 
+        array_A[l_i  * array_size + l_j + 4];
+    }
+    }
+    \end{minted}
+    \end{auflistung}
+    \end{footnotesize}
+    \end{adjustwidth}
+    \end{tiny}
+
+
+
+Eine mögliche Strategie zur Optimierung der Cache-Nutzung besteht darin, 
+mehr als ein Element pro Cachezeilen-Ladevorgang von A zu verwenden. 
+Dies kann durch die zuvor vorgestellte Unroll-and-Jam-Technik erreicht werden. 
+Bei dieser Technik werden bei jeder inneren Operation m Elemente gleichzeitig 
+aus meist nur einer Cachezeile von A genutzt und in B gespeichert. 
+Der Nachteil dabei ist, dass B ständig mindestens m Cachezeilen belegt hält. 
+In der Auflistung \ref{UNROLLANDJAMVERSIONTRANSPONIERENMATRIX} wird eine 
+Implementierung des Matrixtransponierens mit Unroll and Jam gezeigt, 
+wobei hier m = 5 gewählt wurde. 
+In der Abbildung \ref{strided load vs. strided store} ist zu erkennen, 
+dass diese Implementierung eine höhere Bandbreite aufweist als die Strided-Load-Implementierung. 
+Insbesondere wenn die Matrizen zusammen größer sind als der Last-Level-Cache, 
+ist die Unroll-and-Jam-Implementierung etwa 50 Prozent effizienter. 
+Genauer gesagt, hat sich die Bandbreite von 10.0312 GB/s auf 15.6997 GB/s erhöht.
+
+
+\section{BLocking}
+
 \begin{figure}[h]
     \hspace{-0.46cm} % Passen Sie diesen Wert an, um das Bild zu verschieben
-    \includegraphics[width=0.46\textwidth]{/home/daniel/HPC/all_plots/Abbildung_15.png}
     \caption{}
-    \label{fig:mein_bild}
+    \includegraphics[width=0.525\textwidth]{blocking_MVP.png}
+    \label{MVPblocked}
 \end{figure}
 
-Die effektive Bandbreite bei großen Datenmengen liegt bei ca 10 GB/s.
+
+\begin{tiny}
+    \begin{adjustwidth}{-0,37cm}{}
+    \begin{footnotesize}
+    \begin{auflistung}
+    \caption{Implementierung der blockierten Matrixtransposition}
+    \label{Matrixtransposition}
+    \begin{minted}[linenos, gobble=2,xleftmargin=-0.3cm, numbersep=-12pt]{cpp}
+        transpose_blocked(double *A, double *B, int n, size_t blockSize)
+        {
+            if(blockSize > n){
+                blockSize = n;
+            } 
+            size_t nBlocks = n / blockSize;
+            for (size_t i_block = 0; i_block < nBlocks; i_block++)
+            {
+            for (size_t j_block = 0; j_block < nBlocks; j_block++)
+            {
+            for (size_t i = i_block * blockSize; i < (i_block + 1) * blockSize; i++)
+            {
+            for (size_t j = j_block * blockSize; j < (j_block + 1) * blockSize; j++)
+            {
+                B[i * n + j] = A[j * n + i];
+            }
+            }
+            }
+            }
+        }
+\end{minted}
+\end{auflistung}
+\end{footnotesize}
+\end{adjustwidth}
+\end{tiny}
+
+Blocking ist eine Methode, 
+bei der die Problemgröße in kleinere Teile aufgeteilt und diese nacheinander bearbeitet werden. 
+Dies kann dazu beitragen, die zeitliche Lokalität zu verbessern, 
+da kontinuierlich auf dieselben Daten zugegriffen wird. 
+Bei der Unroll-and-Jam-Implementierung zur Transposition einer Matrix konnte die Bandbreite erhöht werden, 
+indem statt eines Elements fünf Elemente einer Cachezeile genutzt wurden, 
+bevor diese verdrängt wurde. Blocking kann nun dazu beitragen, 
+zusätzlich zu den fünf Elementen auch die restlichen Elemente der Cachezeile zu nutzen, 
+bevor diese verdrängt wird. Der beste Weg herauszufinden welche Blockgröße die beste ist,
+ist es die Implementierung mit verschiedenen Blockgrößen zu testen und die Bandbreite zu messen.
+In der Abbildung \ref{MVPblocked} ist die Bandbreite für verschiedene Blockgrößen dargestellt.
+Es hat sich herausgestellt, dass eine Blockgröße von 512 auf dem i7-9700K beispielsweise bei dem Matrix Vektor Produkt am wenigsten Zeit benötigte,
+von den blocking-Werten die getestet wurden. Die "Größe n" gibt die Dimensionsgrößen der Matrix und der Vektoren an das heißt:
+$A \in \mathbb{R}^{m \times n}$, $C \in \mathbb{R}^{n \times 1}$, $B \in \mathbb{R}^{n \times 1}$. Für alle $\textnormal{n}$, berechnet man:
+$C^{n\times 1} += A^{n \times n} \cdot B^{n \times 1}$.
+
+
+Blocking kann man auch auf das Transponieren einer Matrix anwenden. 
+In Auflistung \ref{Matrixtransposition} ist eine Implementierung der blockierten Matrixtransposition dargestellt.
+Die Matrix wird in kleinere Blöcke aufgeteilt und diese Blöcke werden nacheinander transponiert, wobei man jetzt
+nur den Fall betrachtet bei dem die Matrix quadratisch ist, 
+die Blockgröße ein Teiler der Matrixgröße ist.
+
+
+
+
+
+
+\section{Fazit}
+
+
 
 
 
@@ -631,13 +975,22 @@ Die effektive Bandbreite bei großen Datenmengen liegt bei ca 10 GB/s.
 %% (and NOT an unnumbered section). This ensures the proper
 %% identification of the section in the article metadata, and the
 %% consistent spelling of the heading.
-\begin{acks}
+%\begin{acks}
 
-\end{acks}
+%\end{acks}
 
 %%
 %% The next two lines define the bibliography style to be used, and
 %% the bibliography file.
+
+
+%%\begin{figure}[H]
+%%    \caption{\textbf{Basistaktfrequenzen von Intel Prozessoren} (Datenquelle: \cite{Comparison})}
+  %%  \includegraphics[width=0.99\textwidth]{Abbildung_last.png}
+  %%  \label{fig:Abbildung_last} 
+  %%  \end{figure}
+
+
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{sample-base}
 

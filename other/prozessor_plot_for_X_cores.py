@@ -31,7 +31,6 @@ for generation, cores in data:
 plt.plot(x, y, marker='o', linestyle='None')  # Keine Verbindungen zwischen den Punkten
 plt.xlabel('Generation')
 plt.ylabel('Anzahl der Kerne')
-plt.title('Prozessor-Kerne pro Generation')
 plt.xticks(rotation=45)
 plt.grid(True)
 
@@ -42,4 +41,4 @@ plt.gca().invert_xaxis()
 plt.yticks(range(min(y), max(y)+1, 2))
 
 # Plot als PNG speichern
-plt.savefig('prozessor_plot_for_X.png')
+plt.savefig('prozessor_plot_for_X_cores.png')

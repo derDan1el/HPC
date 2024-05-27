@@ -2,46 +2,56 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
-plt.figure(figsize=(15, 7))
+def process_frequency(freq):
+    if '(' in freq and ':' in freq:
+        # Extract the first value from the tuple
+        return float(freq.split(':')[0].strip('()'))
+    else:
+        # Convert to float directly
+        return float(freq)
+
+
 # Daten aus der Datei lesen
 data = np.genfromtxt('output_file.txt', delimiter=',\t', dtype=None, names=True, encoding='utf-8')
 
-# Spalten extrahieren
-prozessor = data['processor_name']# alle Zeilen, nur 1. Spalte
-ghz = data['frequency']# alle Zeilen, nur 3. Spalte
-generation = data['generation']# alle Zeilen,nur 4. Spalte
+# Extract columns
+prozessor = data['processor_name']  # all rows, only 1st column
+ghz_raw = data['frequency']  # all rows, only 3rd column
+generation = data['generation']  # all rows, only 4th column
 
+# Process the frequency column to handle tuples
+ghz = np.array([process_frequency(freq) for freq in ghz_raw])
 
-# Plot erstellen
-plt.scatter(generation, ghz, 5)
+# Create the plot
+plt.figure(figsize=(15, 7))
+plt.scatter(generation, ghz, 8)
 
-# Liste der bereits verwendeten Positionen
+# List of used positions
 used_positions = []
 
 # Prozessornamen an den Punkten anzeigen
 for i, txt in enumerate(prozessor):
     position = (generation[i], ghz[i])
-    
+
     # Überprüfen, ob die Position bereits verwendet wurde
     if position not in used_positions:
         plt.annotate(txt, position, fontsize=8)
         used_positions.append(position)
 
-# Achsenbeschriftungen setzen
+# Set axis labels
 plt.xlabel('Generation')
 plt.ylabel('GHz')
 
-# Achsenlimits setzen
-plt.xlim(-1,11)
+# Set axis limits
+plt.xlim(-1, 12)
 
-# X-Achse umkehren
+# Reverse the x-axis
 plt.gca().invert_xaxis()
 
-# Setzen Sie die Positionen der Ticks auf der x-Achse
-#plt.xticks(np.arange(-1, 11, 3.0))
 
-plt.title("CPU Speeds Across Generations")
-plt.figtext(0.5, 0.01, " Other processors of the same generation and with the same cpu speed have been omitted for reasons of text overlap.\n CPUs of the X series are listed in the next plot and have been omitted here.", ha="center", fontsize=8, wrap=True)
 
-# Plot anzeigen
+
+plt.figtext(0.5, 0.01, "Andere Prozessoren die der gleiche Generation angehören und die gleiche Basistaktfrequenz teilen wurden nicht mitgelistet", ha="center", fontsize=8, wrap=True)
+
+# Save the plot
 plt.savefig('prozessor_plot_for_frequency.png', dpi=300)

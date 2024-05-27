@@ -20,7 +20,6 @@ i7-7800X,	6,	4.00,	7X-series
 i7-7740X,	4,	4.50,	7X-series
 i5-7640X,	4,	4.20,	7X-series
 i7-6950X,	10,	4.00,	6X-series
-i7-6900K,	8,	4.00,	6X-series
 i7-6850K,	6,	4.00,	6X-series
 i7-6800K,	6,	3.80,	6X-series
 i7-5960X,	8,	3.50,	5X-series

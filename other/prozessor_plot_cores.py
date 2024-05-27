@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 
 # Daten aus der Textdatei lesen
 data = []
-with open('output_file.txt', 'r') as file:
+with open('output_file_without_X.txt', 'r') as file:
     next(file)  # Überspringe die erste Zeile
     for line in file:
         line = line.strip().split(',')
@@ -50,7 +50,6 @@ plt.plot(x, y, marker='o', linestyle='None')  # Keine Verbindungen zwischen den 
 plt.plot(curve_x, curve_y, marker='o')  # Kurve durch die höchsten Punkte
 plt.xlabel('Generation')
 plt.ylabel('Anzahl der Kerne')
-plt.title('Prozessor-Kerne pro Generation')
 plt.xticks(rotation=45)
 plt.grid(True)
 
@@ -61,4 +60,4 @@ plt.gca().invert_xaxis()
 plt.yticks(range(min(y), max(y)+1, 2))
 
 # Plot als PNG speichern
-plt.savefig('prozessor_plot.png')
+plt.savefig('prozessor_plot_cores.png')
